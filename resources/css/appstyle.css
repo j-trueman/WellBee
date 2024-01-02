@@ -7,17 +7,25 @@
     justify-content: space-between;
     align-items: center;
     flex-direction: row;
-    padding: 10px;
-    margin-bottom: 50px;
 }
 
 #content {
     display: flex;
     height: 100%;
     width: 100%;
+    overflow-y: scroll;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
+    padding-top: 20px;
+}
+
+#footer {
+    display: flex;
+    height: 100px;
+    background-color: #fffad0;
+    box-shadow: 0px -5px 10px rgba(0, 0, 0, 0.2);
+    z-index: 999;
 }
 
 .padding {
@@ -33,19 +41,78 @@
     -ms-border-radius: 20px;
     -o-border-radius: 20px;
     margin-bottom: 50px;
-    padding: 20px 30px;
+    padding: 10px 15px;
+    filter: drop-shadow(0px 5px 10px rgba(0, 0, 0, 0.2));
+    -webkit-filter: drop-shadow(0px 5px 10px rgba(0, 0, 0, 0.2));
 }
 
-.paddingHeader {
+.paddingTitle {
     display: flex;
     width: 100%;
-    margin-bottom: 20px;
+    font-size: 15px !important;
+    font-weight: 800 !important;
+    font-style: italic !important;
+    text-decoration: underline;
+}
+
+.paddingContent {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#logo {
+    display: flex;
+    width: 50%;
+    height: 100%;
+
+    justify-content: flex-start;
+    align-items: center;
+}
+
+#logoImage {
+    width: 60px;
+    margin-left: 20px;
+    margin-top: 10px;
+}
+
+#pfp {
+    display: flex;
+    width: 50%;
+    height: 100%;
+    padding-right: 30px;
+
+    justify-content: flex-end;
+    align-items: center;
+}
+
+#profilePicture {
+    width: 50px;
+    height: 50px;
+    border-radius: 50px;
+    margin-top: 10px;
+    background-image: url("/resources/images/pfp.png");
+    background-size: contain;
+    filter: drop-shadow(0px 5px 3px rgba(0, 0, 0, 0.2));
+    -webkit-filter: drop-shadow(0px 5px 3px rgba(0, 0, 0, 0.2));
+}
+
+.progressBar {
+    width: 110px;
+    height: 110px;
+}
+
+#steps {
+    width: 130px;
+    height: 130px;
 }
 
 #map {
     border-radius: 20px;
-    height: 250px;
-    width: 450px;
+    height: 100%;
+    width: 100%;
     -webkit-border-radius: 20px;
     -moz-border-radius: 20px;
     -ms-border-radius: 20px;

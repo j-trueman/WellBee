@@ -1,9 +1,11 @@
+
 console.log("Script Connected");
 if ($('#jqueryconnector')) {
 	console.log("JQuery Loaded Successfully");
 };
 
 let map;
+
 
 var waitForEl = function (selector, callback) {
 	if (jQuery(selector).length) {
@@ -30,4 +32,14 @@ const errorCallback = (error) => {
 
 waitForEl('#map', function () {
 	navigator.geolocation.getCurrentPosition(successCallback, errorCallback, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+	var circle = new ProgressBar.Path('#stepsBar', {
+		color: '#FCB03C',
+		strokeWidth: 5,
+		trailWidth: 1,
+		text: {
+			value: '1'
+		}
+	});
+	circle.set(0.5);
 })
+
