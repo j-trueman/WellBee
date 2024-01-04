@@ -12,6 +12,8 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/progressbar.js/0.6.1/progressbar.min.js" integrity="sha512-7IoDEsIJGxz/gNyJY/0LRtS45wDSvPFXGPuC7Fo4YueWMNOmWKMAllEqo2Im3pgOjeEwsOoieyliRgdkZnY0ow==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
         <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.5/dist/js.cookie.min.js"></script>
+        <link rel="stylesheet" type="text/css" href="/resources/css/loading-bar.css"/>
+        <script type="text/javascript" src="/resources/js/loading-bar.js"></script>
         <script src="./resources/js/index.js"></script>
 
         <title>WellBee</title>
@@ -31,15 +33,17 @@
                 <p class="paddingTitle">TODAY'S STATS</p>
                 <div class="paddingContent">
                     <div class="progressBar" id="calories">
-                        <img src="resources/images/hexBar.svg">
-                        
+                        <!-- <img src="resources/images/hexBar.svg"> -->
+                        <div class="caloriesBar label-center"></div>
                     </div>
                     <div class="progressBar" id="steps">
-                        <img src="resources/images/hexBar.svg">
+                        <!-- <img src="resources/images/hexBar.svg"> -->
+                        <div class="stepsBar label-center">
+                        </div>
                     </div>
                     <div class="progressBar" id="miles">
-                        <img src="resources/images/hexBar.svg">
-                        
+                        <!-- <img src="resources/images/hexBar.svg"> -->
+                        <div class="milesBar label-center"></div>
                     </div>
                 </div>
             </div>

@@ -15,8 +15,8 @@ title {
 }
 
 html {
-    width: 480px;
-    height: 800px;
+    width: 480px !important;
+    height: 800px !important;
     color: #211212;
     font-family: "Poppins", sans-serif;
     font-weight: 400;
@@ -29,11 +29,12 @@ html {
 
 body {
     display: flex;
-    width: 480px;
-    height: 800px;
+    width: 480px !important;
+    height: 800px !important;
     color: #211212;
-    background: linear-gradient(to bottom right, #ffb13a, #ffe72c);
+    background-color: #ffb13a;
     background-repeat: no-repeat;
+    background-size: contain;
     overflow: hidden;
     scroll-behavior: smooth;
 
