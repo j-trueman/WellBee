@@ -6,7 +6,6 @@ if ($('#jqueryconnector')) {
 
 let map;
 
-
 var waitForEl = function (selector, callback) {
 	if (jQuery(selector).length) {
 		callback();
