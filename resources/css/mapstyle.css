@@ -32,6 +32,10 @@
     display: none;
 }
 
+.leaflet-tile-loaded {
+    filter: contrast(120%) saturate(1) brightness(1.1) !important;
+}
+
 #reCenterLocation {
     position: absolute;
     width: 40px;
