@@ -167,8 +167,8 @@
 }
 
 .leaflet-tile-loaded {
-    filter: blur(2px) !important;
-    -webkit-filter: blur(2px) !important;
+    filter: blur(2px) grayscale(100%) !important;
+    -webkit-filter: blur(2px) grayscale(100%) !important;
 }
 
 #navToMapPage {

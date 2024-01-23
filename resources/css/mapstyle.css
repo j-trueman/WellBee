@@ -15,6 +15,11 @@
 
 #questSection {
     position: absolute;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    overflow-y: scroll;
     bottom: 0;
     width: 480px;
     height: 320px;
@@ -33,10 +38,120 @@
     height: 40px;
     z-index: 9999;
     right: 20px;
-    transform: translateY(-60px);
+    transform: translateY(420px);
     background-image: url("/resources/images/locator-active.svg");
-    -webkit-transform: translateY(-60px);
-    -moz-transform: translateY(-60px);
-    -ms-transform: translateY(-60px);
-    -o-transform: translateY(-60px);
+    -webkit-transform: translateY(420px);
+    -moz-transform: translateY(420px);
+    -ms-transform: translateY(420px);
+    -o-transform: translateY(420px);
+}
+
+.singleQuestBox {
+    margin-top: 20px;
+    padding: 10px;
+    display: flex;
+    flex-direction: row;
+    width: 420px;
+    height: 140px;
+    border-radius: 10px;
+    color: #f7f5e3;
+    background-color: #46290f !important;
+    -webkit-border-radius: 10px;
+    -moz-border-radius: 10px;
+    -ms-border-radius: 10px;
+    -o-border-radius: 10px;
+}
+
+.questHeader {
+    font-weight: 800;
+    font-style: italic;
+    text-decoration: underline;
+}
+
+.questDescription {
+    font-size: 16px;
+}
+
+.questReward {
+    font-size: 14px;
+    margin-top: 5px;
+}
+
+.questDst {
+    font-weight: 600;
+    font-style: italic;
+    font-size: 13px;
+    margin-top: 3px;
+}
+
+.questButtonBox {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    width: 150px;
+}
+
+.questTitleCard {
+    width: 100%;
+}
+
+.startquest,
+.abandonquest {
+    background-color: #f7c48b;
+    color: #46290f;
+    text-decoration: none;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 14px;
+    font-family: "Poppins";
+    border: none;
+    outline: none;
+    padding: 8px;
+    border-radius: 30px;
+    -webkit-border-radius: 30px;
+    -moz-border-radius: 30px;
+    -ms-border-radius: 30px;
+    -o-border-radius: 30px;
+}
+
+.abandonquest {
+    background-color: #b94817;
+    color: #fffad0;
+}
+
+.singleQuestBox.hidden {
+    display: none;
+}
+
+.activeMarker {
+    animation: hoveranim 1s infinite forwards;
+    -webkit-animation: hoveranim 1s infinite forwards;
+}
+
+@keyframes hoveranim {
+    0% {
+        transform: 0px 0px;
+        -webkit-transform: 0px 0px;
+        -moz-transform: 0px 0px;
+        -ms-transform: 0px 0px;
+        -o-transform: 0px 0px;
+    }
+
+    50% {
+        transform: 0px 10px;
+        -webkit-transform: 0px 10px;
+        -moz-transform: 0px 10px;
+        -ms-transform: 0px 10px;
+        -o-transform: 0px 10px;
+        -webkit-transform: 0px 10px;
+    }
+
+    100% {
+        transform: 0px 0px;
+        -webkit-transform: 0px 0px;
+        -moz-transform: 0px 0px;
+        -ms-transform: 0px 0px;
+        -o-transform: 0px 0px;
+    }
 }
