@@ -1,20 +1,19 @@
 <!DOCTYPE html>
 <html lang="eu" data-theme="light">
+    <?php
+        $conn = mysqli_connect("localhost", "root", "", "wellbee");
+        $dstTraveled = floatval($_COOKIE['dayDistanceTraveled']) ;
+        $stepsTaken = floatval($_COOKIE['dayStepsTaken']);
+        mysqli_query($conn, "UPDATE `uinfo` SET `miles_daily` = $dstTraveled, `steps_daily` = $stepsTaken");
+    ?>
     <head>
         <link rel="stylesheet" type="text/css" href="resources/css/basestyle.css">
         <link rel="stylesheet" type="text/css" href="resources/css/appstyle.css">
-        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-        crossorigin=""/>
-        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-        crossorigin=""></script>
+        <script type="text/javascript" src="/resources/js/loading-bar.js"></script>
+        <link rel="stylesheet" type="text/css" href="/resources/css/loading-bar.css"/>
         <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.5/dist/js.cookie.min.js"></script>
-        <link rel="stylesheet" type="text/css" href="/resources/css/loading-bar.css"/>
-        <script type="text/javascript" src="/resources/js/loading-bar.js"></script>
-        <script src="resources/js/socket-io/socket.io.js"></script>
-        <script src="./resources/js/index.js"></script>
+        <script src="./resources/js/map.js"></script>
 
         <title>WellBee</title>
     </head>
@@ -70,10 +69,10 @@
                 
             </div>
             <div class="padding" id="routes">
-                <p class="paddingTitle">NEARBY ROUTES</p>
+                <p class="paddingTitle">NEARBY QUESTS</p>
                 <div class="paddingContent">
-                    <div id="map">
-                        <a href="quests.html" id="navToMapPage">GO TO ROUTES</a>
+                    <div id="dummy_map">
+                        <a href="quests.php" id="navToMapPage">GO TO QUESTS</a>
                     </div>
                 </div>
             </div>
@@ -98,24 +97,75 @@
             }
         };
         
+        const sock = new WebSocket('ws://192.168.1.69:8080/ws');
+        
+        const distanceCalc = (inputLat1,inputLng1,inputLat2,inputLng2) => {
+            let lat2 = inputLat2/57.29577951;
+            let lng2 = inputLng2/57.29577951;
+            let lat1 = inputLat1/57.29577951;
+            let lng1 = inputLng1/57.29577951;
+            let deltaInMiles = 3963.0 * Math.acos((Math.sin(lat2) * Math.sin(lat1)) + Math.cos(lat2) * Math.cos(lat1) * Math.cos(lng1 - lng2));
+            return deltaInMiles;
+        }
+        
+        sock.addEventListener("message", async (event) => {
+            positionData = event.data.split(',');
+            console.log(`Position: ${positionData[0]},${positionData[1]}`);
+            console.log(`Accuracy: ${positionData[2]}`);
+            console.log(`Speed: ${positionData[3]}`);
+            
+            let dateToExpire = new Date(new Date().getTime() + (24 * 60 * 60 * 1000));
+            dateToExpire.setSeconds(0);
+            dateToExpire.setMinutes(0);
+            dateToExpire.setHours(0);
+            
+            if(Cookies.get('dayDistanceTraveled')){
+                let distanceFromLastKnownPosition = distanceCalc(Cookies.get("latestLat"),Cookies.get("latestLng"),parseFloat(positionData[0]),parseFloat(positionData[1]));
+                let distanceToAdd = parseFloat(Cookies.get('dayDistanceTraveled'));
+                console.log(distanceFromLastKnownPosition);
+                if(distanceFromLastKnownPosition >= 0.01) {
+                    Cookies.set('dayDistanceTraveled', (distanceFromLastKnownPosition + distanceToAdd).toFixed(2), {expires: dateToExpire});
+                    document.location='app.php';
+                }
+                let currentStepsNo = Math.round((parseFloat(Cookies.get('dayDistanceTraveled')) * 1609) / 0.75);
+                Cookies.set('dayStepsTaken', currentStepsNo, {expires: dateToExpire});
+            } else {
+                Cookies.set("dayDistanceTraveled", 0, {expires: dateToExpire});
+                document.location='app.php';
+            }
+            
+            let lastRecievedLat = parseFloat(positionData[0]);
+            let lastRecievedLng = parseFloat(positionData[1]);
+            
+            Cookies.set("latestLat", lastRecievedLat);
+            Cookies.set("latestLng", lastRecievedLng);
+        });
+        
+        sock.addEventListener("open", () => {
+            setInterval(() => {
+                sock.send("request");
+            }, 5000);
+            
+        }); 
+        
         stepsBar = new ldBar('.stepsBar', {
             "stroke": "#f5bb26",
             "stroke-width": "10",
-            "value": "20",
+            "value": "0",
             "path": "M3.999999999999999 84.870489570875Q0 77.94228634059948 3.999999999999999 71.01408311032397L41 6.92820323027551Q45 0 53 0L127 0Q135 0 139 6.92820323027551L176 71.01408311032397Q180 77.94228634059948 176 84.870489570875L139 148.95636945092346Q135 155.88457268119896 127 155.88457268119896L53 155.88457268119896Q45 155.88457268119896 41 148.95636945092346Z"
         });
         // document.querySelector('.stepsBar .ldBar-label').innerHTML = "350/1000<br>STEPS";
         caloriesBar = new ldBar('.caloriesBar', {
             "stroke": "#f5bb26",
             "stroke-width": "10",
-            "value": "60",
+            "value": "0",
             "path": "M3.999999999999999 84.870489570875Q0 77.94228634059948 3.999999999999999 71.01408311032397L41 6.92820323027551Q45 0 53 0L127 0Q135 0 139 6.92820323027551L176 71.01408311032397Q180 77.94228634059948 176 84.870489570875L139 148.95636945092346Q135 155.88457268119896 127 155.88457268119896L53 155.88457268119896Q45 155.88457268119896 41 148.95636945092346Z"
         });
         // document.querySelector('.caloriesBar .ldBar-label').innerHTML = "467/870<br>CALORIES";
         milesBar = new ldBar('.milesBar', {
             "stroke": "#f5bb26",
             "stroke-width": "10",
-            "value": "90",
+            "value": "0",
             "path": "M3.999999999999999 84.870489570875Q0 77.94228634059948 3.999999999999999 71.01408311032397L41 6.92820323027551Q45 0 53 0L127 0Q135 0 139 6.92820323027551L176 71.01408311032397Q180 77.94228634059948 176 84.870489570875L139 148.95636945092346Q135 155.88457268119896 127 155.88457268119896L53 155.88457268119896Q45 155.88457268119896 41 148.95636945092346Z"
         });
         <?php
@@ -136,7 +186,7 @@
         $calories_daily_percent_complete = round(($calories_daily/$calories_target)*100, 2);
         
         echo "
-        waitForEl('#map', function(){
+        waitForEl('#dummy_map', function(){
             stepsBar.set($steps_daily_percent_complete, false);
             document.querySelector('.stepsBar .ldBar-label').innerHTML = '$steps_daily/$steps_target<br>STEPS';
             milesBar.set($miles_daily_percent_complete, false);

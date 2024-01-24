@@ -1,5 +1,8 @@
 <?php
     session_start();
+    $conn = mysqli_connect("localhost", "root", "", "wellbee");
+    $dstTraveled = floatval($_COOKIE['dayDistanceTraveled']) ;
+    mysqli_query($conn, "UPDATE `uinfo` SET `miles_daily` = $dstTraveled");
 ?>
 <!DOCTYPE html>
 <html lang="eu" data-theme="light">
@@ -24,6 +27,7 @@
         <section id="content">
             <div id="map">
                 </div>
+                    <a href='app.php' id='homebtn'></a>
                 <a href='#' id="reCenterLocation"></a>
             </section>
         <section id="questSection">
@@ -50,6 +54,7 @@
                                 </div>
                                 <form class='questButtonBox' method='GET' onsubmit='return submit(this)'>
                                 <button type='submit' name='abandonquest' class='abandonquest' value=$quest_id>Abandon Quest</button>
+                                <button type='submit' name='completequest' class='completequest'></button>
                                 <p class='questDst'></p>
                             </form>
                             </div>
@@ -92,11 +97,21 @@
         const sock = new WebSocket('ws://192.168.1.69:8080/ws');
         mapShouldTrack = true;
         
+        const distanceCalc = (inputLat1,inputLng1,inputLat2,inputLng2) => {
+            let lat2 = inputLat2/57.29577951;
+            let lng2 = inputLng2/57.29577951;
+            let lat1 = inputLat1/57.29577951;
+            let lng1 = inputLng1/57.29577951;
+            let deltaInMiles = 3963.0 * Math.acos((Math.sin(lat2) * Math.sin(lat1)) + Math.cos(lat2) * Math.cos(lat1) * Math.cos(lng1 - lng2));
+            return deltaInMiles;
+        }
+        
         sock.addEventListener("message", async (event) => {
             positionData = event.data.split(',');
             console.log(`Position: ${positionData[0]},${positionData[1]}`);
             console.log(`Accuracy: ${positionData[2]}`);
             console.log(`Speed: ${positionData[3]}`);
+            
             if (mapShouldTrack) {
                 map.setView([positionData[0], positionData[1]], 16);
                 document.getElementById('reCenterLocation').style.backgroundImage = "url('/resources/images/locator-active.svg')";
@@ -107,6 +122,7 @@
             if (typeof circle != "undefined") {
                 circle.removeFrom(map);
             }
+            
             circle = L.circle([positionData[0], positionData[1]], {
                 color: 'lightblue',
                 fillColor: '#42e8f4',
@@ -114,13 +130,34 @@
                 radius: parseInt(positionData[2])
             }).addTo(map);
             
+            let dateToExpire = new Date(new Date().getTime() + (24 * 60 * 60 * 1000));
+            dateToExpire.setSeconds(0);
+            dateToExpire.setMinutes(0);
+            dateToExpire.setHours(0);
+            
+            if(Cookies.get('dayDistanceTraveled')){
+                let distanceFromLastKnownPosition = distanceCalc(Cookies.get("latestLat"),Cookies.get("latestLng"),parseFloat(positionData[0]),parseFloat(positionData[1]));
+                let distanceToAdd = parseFloat(Cookies.get('dayDistanceTraveled'));
+                console.log(distanceFromLastKnownPosition);
+                if(distanceFromLastKnownPosition >= 0.01) {
+                    Cookies.set('dayDistanceTraveled', (distanceFromLastKnownPosition + distanceToAdd).toFixed(2), {expires: dateToExpire});
+                }
+                let currentStepsNo = Math.round((parseFloat(Cookies.get('dayDistanceTraveled')) * 1609) / 0.75);
+                Cookies.set('dayStepsTaken', currentStepsNo, {expires: dateToExpire});
+            } else {
+                Cookies.set("dayDistanceTraveled", 0, {expires: dateToExpire});
+            }
+            
+            let lastRecievedLat = parseFloat(positionData[0]);
+            let lastRecievedLng = parseFloat(positionData[1]);
+            
+            Cookies.set("latestLat", lastRecievedLat);
+            Cookies.set("latestLng", lastRecievedLng);
+            
+            
             map.eachLayer(function(layer) {
                 if(layer.options.title) {
-                    let RADmarkerlat = layer.getLatLng().lat/57.29577951;
-                    let RADmarkerlng = layer.getLatLng().lng/57.29577951;
-                    let RADuserlat = positionData[0]/57.29577951;
-                    let RADuserlng = positionData[1]/57.29577951;
-                    let dstToQuest = 3963.0 * Math.acos((Math.sin(RADmarkerlat) * Math.sin(RADuserlat)) + Math.cos(RADmarkerlat) * Math.cos(RADuserlat) * Math.cos(RADuserlng - RADmarkerlng));
+                    dstToQuest = distanceCalc(layer.getLatLng().lat, layer.getLatLng().lng, positionData[0], positionData[1]);
                     let labelselector = `#questbox_${layer.options.title} .questDst`;
                     let boxselector = `#questbox_${layer.options.title}`;
                     if (!boxselector.includes('undefined')){
@@ -128,8 +165,12 @@
                         document.querySelector(labelselector).innerHTML = `${dstToQuest.toFixed(2)}<sub>mi</sub> away`;
                         console.log(`Distance to ${layer.options.title}: ${dstToQuest} miles`);
                     }
+                    if(layer.options.title == Cookies.get('activequest') && dstToQuest <= 0.02) {
+                        document.querySelector('.completequest').click();
+                    }
                 }
             })
+            
         });
         
         sock.addEventListener("open", () => {
@@ -177,7 +218,7 @@
                 <?php
                 $conn = mysqli_connect("localhost", "root", "", "wellbee");
                 
-                $get_quests = mysqli_query($conn, "SELECT `quest_id`,`coordinates` FROM `quests`");
+                $get_quests = mysqli_query($conn, "SELECT `quest_id`,`coordinates` FROM `quests` WHERE `completed` = 0");
                 while($current_quest = mysqli_fetch_assoc($get_quests)) {
                     $quest_id = $current_quest['quest_id'];
                     $coords = explode(",",$current_quest['coordinates']);
@@ -227,7 +268,30 @@
                         mapShouldTrack = false;
                         document.getElementById('reCenterLocation').style.backgroundImage = 'url(/resources/images/locator-inactive.svg)';
                     })
-                });";
+                });
+                
+                document.querySelectorAll('.singleQuestBox').forEach((element) => {
+                    element.addEventListener('click', function(e) {
+                        document.querySelectorAll('.singleQuestBox').forEach((el) => {
+                            el.classList.add('hidden');
+                        })
+                        this.classList.remove('hidden');
+                        map.eachLayer((layer) => {
+                            if(layer.options.title == element.id.split('questbox_')[1]) {
+                                let markerLat = layer.getLatLng().lat;
+                                let markerLng = layer.getLatLng().lng;
+                                map.setView([markerLat, markerLng], 16);
+                            }
+                        })
+                    })
+                });
+                
+                let dateToExpire = new Date(new Date().getTime() + (24 * 60 * 60 * 1000));
+                dateToExpire.setSeconds(0);
+                dateToExpire.setMinutes(0);
+                dateToExpire.setHours(0);
+                ";
+                
                 
                 if (isset($_GET['startquest'])) {
                     $quest_id = $_GET['startquest'];
@@ -235,14 +299,25 @@
                     mysqli_query($conn, "UPDATE `uinfo` SET `curent_quest_id` = $quest_id");
                     echo "document.querySelector('#questbox_$quest_id').classList.add('active');let arr = document.querySelectorAll('.singleQuestBox:not(#questbox_$quest_id)');arr.forEach((element) => { element.classList.add('hidden');});";
                     echo"window.location = 'quests.php';";
+                    echo"Cookies.set('activequest', $quest_id, {expires: dateToExpire});";
                     
                 }
                 if (isset($_GET['abandonquest'])) {
                     $quest_id = $_GET['abandonquest'];
                     unset($_SESSION['questactive']);
                     mysqli_query($conn, "UPDATE `uinfo` SET `curent_quest_id` = 0");
-                    echo"window.location = 'quests.php';";                   
+                    echo"Cookies.set('activequest', 0, {expires: dateToExpire});";            
+                    echo"window.location = 'quests.php';";
                 }
+                if (isset($_GET['completequest'])) {
+                    unset($_SESSION['questactive']);
+                    mysqli_query($conn, "UPDATE `uinfo` SET `curent_quest_id` = 0");
+                    mysqli_query($conn, "UPDATE `quests` SET `completed` = 1 WHERE `quest_id` = $quest_id");
+                    echo "alert('You completed the quest! :)');";
+                    echo"Cookies.set('activequest', 0, {expires: dateToExpire});";
+                    echo"window.location = 'quests.php';";
+                }
+                
                 if(isset($_SESSION['questactive'])) {
                     echo"map.setView(['$coords[0]','$coords[1]'], 16); mapShouldTrack = false;";
                 }

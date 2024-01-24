@@ -112,14 +112,15 @@
     height: 130px;
 }
 
-#map {
+#dummy_map {
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 10px;
-    height: 170px;
-    width: 390px;
+    height: 170px !important;
+    width: 390px !important;
     z-index: 1;
+    background-image: url('/resources/images/dummy_tile.png');
     -webkit-border-radius: 10px;
     -moz-border-radius: 10px;
     -ms-border-radius: 10px;
@@ -166,21 +167,18 @@
     scrollbar-width: none;
 }
 
-.leaflet-tile-loaded {
-    filter: blur(2px) grayscale(100%) !important;
-    -webkit-filter: blur(2px) grayscale(100%) !important;
-}
-
 #navToMapPage {
     background-color: #623b18;
-    padding: 20px;
+    margin: 50px !important;
     border-radius: 30px;
     text-decoration: none;
     font-family: "Poppins";
+    backdrop-filter: blur(2px);
     font-weight: 800;
     font-style: italic;
     color: #fffad0;
     z-index: 999;
+    padding: 15px;
     -webkit-border-radius: 30px;
     -moz-border-radius: 30px;
     -ms-border-radius: 30px;
