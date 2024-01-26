@@ -293,7 +293,7 @@ const distanceCalc = (inputLat1,inputLng1,inputLat2,inputLng2) => {
 }
 ```
 If the distance moved since the last update is greater than 1 meter then we add the distance from the last known position to the the total distance traveled for that day. However, since there are sometimes innacuracies in the location updates we have to account for this. To combat this we also check if the users current speed is over a threshold (about 0.45m/s or 1mph). To take this even further, every time these criteria are consecutively met we add 1 to an integer called isMoving and if this integer reaches 3 then we update the total distance traveled and save this value to a cookie that expires at midnight[^9]. If the user stops moving before this integer hits 3 then it is reset back to 0.
-```
+```javascript
 if(Cookies.get('dayDistanceTraveled')){
     let distanceFromLastKnownPosition = distanceCalc(Cookies.get("latestLat"),Cookies.get("latestLng"),userLat,userLng);
     let distanceToAdd = parseFloat(Cookies.get('dayDistanceTraveled'));
@@ -310,7 +310,28 @@ if(Cookies.get('dayDistanceTraveled')){
     }
     ...
 ```
-
+We then also calculate the steps taken by getting the total distance traveled and multiplying this by 1609 to get the distance in meters then dividing this by 0.75 (the average pace length of a human) to get the steps taken by the person.
+```javascript
+let currentStepsNo = Math.round((parseFloat(Cookies.get('dayDistanceTraveled')) * 1609) / 0.75);
+```
+We also use this same distanace calculation function to calculate the distance from the user to each quest. By using LeafletJS' `eachLayer()` funciton we can loop over every item in the map and, if its a marker, get its position and use that to calculate the distance. We can also use this to check when the user gets close enough to a quest to complete it.
+```javascript
+map.eachLayer(function(layer) {
+    if(layer.options.title) {
+        dstToQuest = distanceCalc(layer.getLatLng().lat, layer.getLatLng().lng, userLat, userLng);
+        let labelselector = `#questbox_${layer.options.title} .questDst`;
+        let boxselector = `#questbox_${layer.options.title}`;
+        if (!boxselector.includes('undefined')){
+            document.querySelector(boxselector).setAttribute("dstfromuser", dstToQuest.toFixed(2).toString());
+            document.querySelector(labelselector).innerHTML = `${dstToQuest.toFixed(2)}<sub>mi</sub> away`;
+            // console.log(`Distance to ${layer.options.title}: ${dstToQuest} miles`);
+        }
+        if(layer.options.title == Cookies.get('activequest') && dstToQuest <= 0.02) {
+            document.querySelector('.completequest').click();
+        }
+    }
+})
+```
 [^1]: Step and calorie tracking are rough estimates. Steps being based on the average page length of a human (around 0.75 meters).
 [^2]: The gaining of points currently serves no purpose.
 [^3]: All modifications were made by us. Read more about FullPageOs [here](https://github.com/guysoft/FullPageOS).
