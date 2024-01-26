@@ -35,13 +35,13 @@ We developed a small android application with Flutter in order to stream locatio
 Here's some screenshots of the webapp. Let's go through it bit by bit and explain how it all works.
 
 <img src="https://github.com/j-trueman/WellBee/assets/82833724/5e0524fa-8bb3-4148-b5dc-c3cb4dee87f2" style="width: 250px">
-<img src="https://github.com/j-trueman/WellBee/assets/82833724/0a7c09ef-2e48-49c1-bb44-25c6bbc7a914" style="width: 250px">
+<img src="https://github.com/j-trueman/WellBee/assets/82833724/e95f0bcb-40c7-43b4-b43b-5334e61f353e" style="width: 250px">
 
 ### The Progress Bars
 
 <img src="https://github.com/j-trueman/WellBee/assets/82833724/7fc7f32e-3234-43fa-9ae1-9211eb916d9b" style="width: 250px">
 
-These progress bars break down the users daily stats and show how close they are to reaching their goals for the day (distance walked, steps taken and calories burned) These progress bars were created using the LoadingBar JavaScript library which allows us to use an svg as the basis for the path that the progres bar follows. Below you can see the code that generates these progress bars:
+These progress bars break down the users daily stats and show how close they are to reaching their goals for the day (distance walked, steps taken and calories burned) These progress bars were created using the LoadingBar JavaScript library which allows us to use an svg path value as the basis for the path that the progres bar follows. Below you can see the code that generates these progress bars:
 ```javascript,php
 //Create the progress bar object
 progressBarNameHere = new ldBar('.progressBarCSSSelectorHere', {
@@ -54,49 +54,92 @@ progressBarNameHere = new ldBar('.progressBarCSSSelectorHere', {
 This PHP code then pulls the users data from the backend database and calculates the percentage of the goal that has been completed before setting the text in the bars to match this.
 ```php
 <?php
+      //Connect to the datdabase and collect goal data (this could be turned into an object. will do that in update)
       $conn = mysqli_connect("dbhostname", "dbusername", "dbpassword", "dbname");
       $steps_query_result = mysqli_fetch_assoc(mysqli_query($conn, "SELECT `steps_daily`, `steps_target` FROM `uinfo`"));
       $miles_query_result = mysqli_fetch_assoc(mysqli_query($conn, "SELECT `miles_daily`, `miles_target` FROM `uinfo`"));
       $calories_query_result = mysqli_fetch_assoc(mysqli_query($conn, "SELECT `calories_daily`, `calories_target` FROM `uinfo`"));
-        
+
+      //Store values to variables
       $steps_daily = $steps_query_result["steps_daily"];
       $steps_target = $steps_query_result["steps_target"];
       $miles_daily = $miles_query_result["miles_daily"];
       $miles_target = $miles_query_result["miles_target"];
       $calories_daily = $calories_query_result["calories_daily"];
       $calories_target = $calories_query_result["calories_target"];
-        
+
+      //Calculate percentage of goal completed
       $steps_daily_percent_complete = round(($steps_daily/$steps_target)*100, 2);
       $miles_daily_percent_complete = round(($miles_daily/$miles_target)*100, 2);
       $calories_daily_percent_complete = round(($calories_daily/$calories_target)*100, 2);
-        
+
+      //Add some javascript to change the labels on the progress bars and set their values.
       echo "
-      waitForEl('#dummy_map', function(){
-          stepsBar.set($steps_daily_percent_complete, false);
-          document.querySelector('.stepsBar .ldBar-label').innerHTML = '$steps_daily/$steps_target<br>STEPS';
-          milesBar.set($miles_daily_percent_complete, false);
-          document.querySelector('.milesBar .ldBar-label').innerHTML = '$miles_daily/$miles_target<br>MILES';
-          caloriesBar.set($calories_daily_percent_complete, false);
-          document.querySelector('.caloriesBar .ldBar-label').innerHTML = '$calories_daily/$calories_target<br>CALORIES';
-      })
+            waitForEl('#dummy_map', function(){
+                  stepsBar.set($steps_daily_percent_complete, false);
+                  document.querySelector('.stepsBar .ldBar-label').innerHTML = '$steps_daily/$steps_target<br>STEPS';
+                  milesBar.set($miles_daily_percent_complete, false);
+                  document.querySelector('.milesBar .ldBar-label').innerHTML = '$miles_daily/$miles_target<br>MILES';
+                  caloriesBar.set($calories_daily_percent_complete, false);
+                  document.querySelector('.caloriesBar .ldBar-label').innerHTML = '$calories_daily/$calories_target<br>CALORIES';
+            });
       ";
 ?>
 ```
 And the actual DOM elements look like this
 ```html
 <div class="progressBar" id="calories">
-    <div class="caloriesBar label-center"></div>
+      <div class="caloriesBar label-center"></div>
 </div>
 <div class="progressBar" id="steps">
-    <div class="stepsBar label-center"></div>
+      <div class="stepsBar label-center"></div>
 </div>
 <div class="progressBar" id="miles">
-    <div class="milesBar label-center"></div>
+      <div class="milesBar label-center"></div>
 </div>
 ```
 ### The Badges
 
 <img src="https://github.com/j-trueman/WellBee/assets/82833724/0bbef451-3c5a-45a0-aef0-0fcbd51c2abe" style="width: 250px">
+
+The badges that the user currently posses are stored in the `badge_acquired_ids` field of the user info database along with a URL to the image that it uses in the `img_url_reference` field and is formatted as a list of comma separated values. e.g.
+`"1,4,3,7"`. Badges are are created via this PHP code which pulls that field from the database and then explodes the field on every comma. It then loops through the returned array and if the value is not null then it displays that badge in the badge section of the app.
+```php
+<div class="paddingContent" id="badgesContainer">
+      <?php
+            $conn = mysqli_connect("localhost", "root", "", "wellbee");
+            $badges_acquired = explode(",",mysqli_fetch_assoc(mysqli_query($conn, "SELECT `badge_acquired_ids` FROM `uinfo`"))['badge_acquired_ids']);
+            foreach($badges_acquired as $current_badge_id) {
+                  if($current_badge_id != "") {
+                        $badge_image_reference = mysqli_fetch_assoc(mysqli_query($conn, "SELECT `image_url_reference` FROM `badges` WHERE `badge_id` = '$current_badge_id'"))['image_url_reference'];
+                        echo "
+                              <div class='badgeObject'>
+                                    <img class='badgeImage' src='resources/images/$badge_image_reference'>
+                              </div>
+                        ";
+                  }
+            }
+      ?>
+</div>
+```
+
+### The Map
+
+![image](https://github.com/j-trueman/WellBee/assets/82833724/53bcd404-f385-45af-bce1-5d3b74d7eb65)
+
+The map is created with the LeafletJS library. To create a new map with LeafletJS you simply have to import the script and stylesheet as a header tag:
+```html
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+```
+and then set the start position of the map and load the tiles in JavaScript:
+```javascript
+map = L.map('map').setView(["55.765088665952746", "-4.151738591291236"], 13);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+}).addTo(map);
+```
 
 
 [^1]: Step and calorie tracking are rough estimates. Steps being based on the average page length of a human (around 0.75 meters).
