@@ -3,3 +3,8 @@ test.php
 resources/js/map.js
 resources/js/map.js
 resources/js/index.js
+Ansible/
+database backup/ansible.sql
+resources/js/cartpage.js
+resources/js/preventFormResubmit.js
+resources/js/storepage.js

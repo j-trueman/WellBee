@@ -2,9 +2,13 @@
 <html lang="eu" data-theme="light">
     <?php
         $conn = mysqli_connect("localhost", "root", "", "wellbee");
-        $dstTraveled = floatval($_COOKIE['dayDistanceTraveled']) ;
-        $stepsTaken = floatval($_COOKIE['dayStepsTaken']);
-        mysqli_query($conn, "UPDATE `uinfo` SET `miles_daily` = $dstTraveled, `steps_daily` = $stepsTaken");
+        if(isset($_COOKIE['dayDistanceTraveled'])){
+            $dstTraveled = round(floatval($_COOKIE['dayDistanceTraveled']), 2);
+            if (isset($_COOKIE['dayStepsTaken'])) {
+                $stepsTaken = floatval($_COOKIE['dayStepsTaken']);
+                mysqli_query($conn, "UPDATE `uinfo` SET `miles_daily` = $dstTraveled, `steps_daily` = $stepsTaken");
+            }
+        }
     ?>
     <head>
         <link rel="stylesheet" type="text/css" href="resources/css/basestyle.css">
@@ -49,22 +53,20 @@
             <div class="padding" id="badges">
                 <p class="paddingTitle">RECENT BADGES</p>
                 <div class="paddingContent" id="badgesContainer">
-                    <div class="badgeObject">
-                        <img class="badgeImage" src="resources/images/badge.png">
-                    </div>
-                    <div class="badgeObject">
-                        <img class="badgeImage" src="resources/images/badge.png">
-                    </div>
-                    <div class="badgeObject">
-                        <img class="badgeImage" src="resources/images/badge.png">
-                    </div>
-                    <div class="badgeObject">
-                        <img class="badgeImage" src="resources/images/badge.png">
-                    </div>
-                    <div class="badgeObject">
-                        <img class="badgeImage" src="resources/images/badge.png">
-                    </div>
-                    <div id="fadeOut"></div>
+                    <?php
+                        $conn = mysqli_connect("localhost", "root", "", "wellbee");
+                        $badges_acquired = explode(",",mysqli_fetch_assoc(mysqli_query($conn, "SELECT `badge_acquired_ids` FROM `uinfo`"))['badge_acquired_ids']);
+                        foreach($badges_acquired as $current_badge_id) {
+                            if($current_badge_id != "") {
+                                $badge_image_reference = mysqli_fetch_assoc(mysqli_query($conn, "SELECT `image_url_reference` FROM `badges` WHERE `badge_id` = '$current_badge_id'"))['image_url_reference'];
+                                echo "
+                                    <div class='badgeObject'>
+                                        <img class='badgeImage' src='resources/images/$badge_image_reference'>
+                                    </div>
+                                ";
+                            }
+                        }
+                    ?>
                 </div>
                 
             </div>
@@ -109,10 +111,11 @@
         }
         
         sock.addEventListener("message", async (event) => {
+            console.clear();
             positionData = event.data.split(',');
             console.log(`Position: ${positionData[0]},${positionData[1]}`);
-            console.log(`Accuracy: ${positionData[2]}`);
-            console.log(`Speed: ${positionData[3]}`);
+            console.log(`Accuracy: ${parseFloat(positionData[2]).toFixed(2)} meters`);
+            console.log(`Speed: ${(positionData[3] * 2.237).toFixed(4)} mi/h`);
             
             let dateToExpire = new Date(new Date().getTime() + (24 * 60 * 60 * 1000));
             dateToExpire.setSeconds(0);
@@ -122,11 +125,19 @@
             if(Cookies.get('dayDistanceTraveled')){
                 let distanceFromLastKnownPosition = distanceCalc(Cookies.get("latestLat"),Cookies.get("latestLng"),parseFloat(positionData[0]),parseFloat(positionData[1]));
                 let distanceToAdd = parseFloat(Cookies.get('dayDistanceTraveled'));
-                console.log(distanceFromLastKnownPosition);
-                if(distanceFromLastKnownPosition >= 0.01) {
-                    Cookies.set('dayDistanceTraveled', (distanceFromLastKnownPosition + distanceToAdd).toFixed(2), {expires: dateToExpire});
-                    document.location='app.php';
+                console.log(`Distance moved since last update: ${(distanceFromLastKnownPosition).toFixed(3)} mi`);
+                if(distanceFromLastKnownPosition >= 0.001 && parseFloat(positionData[3]) >= 0.44704 && parseFloat(positionData[3]) <= 6.7056) {
+                    isMoving += 1
+                    if (isMoving > 2) {
+                        Cookies.set('dayDistanceTraveled', (distanceFromLastKnownPosition + distanceToAdd).toFixed(3), {expires: dateToExpire});
+                        movementStatus = "Moving"
+                        window.location = 'app.php';
+                    }
+                } else {
+                    movementStatus = "Idle"
+                    isMoving = 0
                 }
+                console.log(`Status: ${movementStatus}`)
                 let currentStepsNo = Math.round((parseFloat(Cookies.get('dayDistanceTraveled')) * 1609) / 0.75);
                 Cookies.set('dayStepsTaken', currentStepsNo, {expires: dateToExpire});
             } else {
@@ -140,13 +151,6 @@
             Cookies.set("latestLat", lastRecievedLat);
             Cookies.set("latestLng", lastRecievedLng);
         });
-        
-        sock.addEventListener("open", () => {
-            setInterval(() => {
-                sock.send("request");
-            }, 5000);
-            
-        }); 
         
         stepsBar = new ldBar('.stepsBar', {
             "stroke": "#f5bb26",
