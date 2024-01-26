@@ -32,3 +32,4 @@ await for (HttpRequest request in server) {
     }
 }
 ```
+You can download and use the apk from the [releases](https://github.com/j-trueman/WellBee/releases) tab if you want to use it yourself.
