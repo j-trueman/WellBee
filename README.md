@@ -273,16 +273,17 @@ if (typeof circle != "undefined") {
     circle.removeFrom(map);
 }
 
-circle = L.circle([positionData[0], positionData[1]], {
+circle = L.circle([userLat, userLng], {
     color: 'lightblue',
     fillColor: '#42e8f4',
     fillOpacity: 0.5,
-    radius: parseInt(positionData[2])
+    radius: parseInt(positionAccuracy)
 }).addTo(map);
 ```
-Every update, we update how far the user has travelled that day by calculating the distance between the latitude and longitude points of the last known position and the users current position. Here is the function that is used to calculate this delta:
+Every time we recieve the location, we update how far the user has travelled that day by calculating the distance between the latitude and longitude points of the last known position and the users current position. Here is the function that is used to calculate this delta:
 ```javascript
 const distanceCalc = (inputLat1,inputLng1,inputLat2,inputLng2) => {
+    //divided by 57.295... to convert to radians
     let lat2 = inputLat2/57.29577951;
     let lng2 = inputLng2/57.29577951;
     let lat1 = inputLat1/57.29577951;
@@ -291,6 +292,8 @@ const distanceCalc = (inputLat1,inputLng1,inputLat2,inputLng2) => {
     return deltaInMiles;
 }
 ```
+We can then store this info in a cookie
+
 
 [^1]: Step and calorie tracking are rough estimates. Steps being based on the average page length of a human (around 0.75 meters).
 [^2]: The gaining of points currently serves no purpose.
