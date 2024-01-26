@@ -332,6 +332,11 @@ map.eachLayer(function(layer) {
     }
 })
 ```
+
+## How can YOU use WellBee?
+
+Want to download and use WellBee for yourself? Just download the image from the [releases](https://github.com/j-trueman/WellBee/releases) tab and flash it to your RPi device using [Raspberry Pi Imager](https://www.raspberrypi.com/software/); 
+
 [^1]: Step and calorie tracking are rough estimates. Steps being based on the average page length of a human (around 0.75 meters).
 [^2]: The gaining of points currently serves no purpose.
 [^3]: All modifications were made by us. Read more about FullPageOs [here](https://github.com/guysoft/FullPageOS).
