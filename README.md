@@ -280,6 +280,18 @@ circle = L.circle([positionData[0], positionData[1]], {
     radius: parseInt(positionData[2])
 }).addTo(map);
 ```
+Every update, we update how far the user has travelled that day by calculating the distance between the latitude and longitude points of the last known position and the users current position. Here is the function that is used to calculate this delta:
+```javascript
+const distanceCalc = (inputLat1,inputLng1,inputLat2,inputLng2) => {
+    let lat2 = inputLat2/57.29577951;
+    let lng2 = inputLng2/57.29577951;
+    let lat1 = inputLat1/57.29577951;
+    let lng1 = inputLng1/57.29577951;
+    let deltaInMiles = 3963.0 * Math.acos((Math.sin(lat2) * Math.sin(lat1)) + Math.cos(lat2) * Math.cos(lat1) * Math.cos(lng1 - lng2));
+    return deltaInMiles;
+}
+```
+
 [^1]: Step and calorie tracking are rough estimates. Steps being based on the average page length of a human (around 0.75 meters).
 [^2]: The gaining of points currently serves no purpose.
 [^3]: All modifications were made by us. Read more about FullPageOs [here](https://github.com/guysoft/FullPageOS).
