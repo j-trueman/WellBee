@@ -292,8 +292,24 @@ const distanceCalc = (inputLat1,inputLng1,inputLat2,inputLng2) => {
     return deltaInMiles;
 }
 ```
-We can then store this info in a cookie
-
+If the distance moved since the last update is greater than 1 meter then we add the distance from the last known position to the the total distance traveled for that day. However, since there are sometimes innacuracies in the location updates we have to account for this. To combat this we also check if the users current speed is over a threshold (about 0.45m/s or 1mph). To take this even further, every time these criteria are consecutively met we add 1 to an integer called isMoving and if this integer reaches 3 then we update the total distance traveled and save this value to a cookie that expires at midnight[^9]. If the user stops moving before this integer hits 3 then it is reset back to 0.
+```
+if(Cookies.get('dayDistanceTraveled')){
+    let distanceFromLastKnownPosition = distanceCalc(Cookies.get("latestLat"),Cookies.get("latestLng"),userLat,userLng);
+    let distanceToAdd = parseFloat(Cookies.get('dayDistanceTraveled'));
+    if(distanceFromLastKnownPosition >= 0.001 && userSpeed >= 0.44704 && userSpeed <= 6.7056) {
+        isMoving += 1
+        if (isMoving > 2) {
+            Cookies.set('dayDistanceTraveled', (distanceFromLastKnownPosition + distanceToAdd).toFixed(3), {expires: dateToExpire});
+            movementStatus = "Moving"
+            window.location = 'app.php';
+        }
+    } else {
+        movementStatus = "Idle"
+        isMoving = 0
+    }
+    ...
+```
 
 [^1]: Step and calorie tracking are rough estimates. Steps being based on the average page length of a human (around 0.75 meters).
 [^2]: The gaining of points currently serves no purpose.
@@ -303,3 +319,4 @@ We can then store this info in a cookie
 [^6]: While we realise that this is a security risk, this is a small project and we are not overly concerned about making it secure until we need to.
 [^7]: This may be updated to a json model in future for ease of data parsing.
 [^8]: Or when they click on the "recent location" button.
+[^9]: E.g. if the date was January 17, the cookie would expire at Jan 18 00:00:00
