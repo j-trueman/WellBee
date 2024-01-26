@@ -242,11 +242,49 @@ The markers work very similarly except they are generated with JavaScript instea
 
 ## Lets Talk About Location Tracking
 
-Location tracking for the app is done via a mobile device that communicates with the WellBee unit through a WebSocket. The device has on it a Flutter app which uses the [Flutter Location]() library to pull the location data from the devices gps. It then advertises a websocket which will send the location data to whichever client connects to it[^6].
+### Companion App
 
+Location tracking for the app is done via a mobile device that communicates with the WellBee unit through a WebSocket. The device has on it a Flutter app which uses the [Flutter Location](https://pub.dev/packages/location) library to pull the location data from the devices gps. It then advertises a websocket which will send the location data to whichever client connects to it[^6]. You can read more about the companion app and how it works in the [COMPANION.md](https://github.com/j-trueman/WellBee/blob/main/COMPANION.md) readme.
+
+### Client Side
+
+On the client side we use JavaScript's built-in WebSocket API to communicate with the one being advertised by the companion app. To start, we create a new socket object.
+```javascript
+const sock = new WebSocket('ws://192.168.1.69:8080/ws');
+```
+As soon as this connection is opened, we can setup an event listener that listens for the "message" event and then we should start recieving location updates from the companion app. These updates come in the form of a list of comma separated values[^7] which we can split and assign each value to a variable.
+```javascript
+mapShouldTrack = true;
+
+sock.addEventListener("message", async (event) => {
+    console.clear();
+    positionData = event.data.split(',');
+    let userLat = parseFloat(positionData[0]);
+    let userLng = parseFloat(positionData[1]);
+    let positionAccuracy = parseFloat(positionData[2]);
+    let userSpeed = parseFloat(positionData[3]);
+...
+```
+You may also have noticed this `mapShouldTrack` variable which is used to determine whether the map should be centered on the user. This is on by default but turns off when the user clicks or moves the map to a different location[^8].
+We then use the position data to draw a circle around where the user is. The circle has a radius of whatever the accuracy value of the location data is (this is in meters).
+```javascript
+//This if statement is used to remove the circle from the previous location update.
+if (typeof circle != "undefined") {
+    circle.removeFrom(map);
+}
+
+circle = L.circle([positionData[0], positionData[1]], {
+    color: 'lightblue',
+    fillColor: '#42e8f4',
+    fillOpacity: 0.5,
+    radius: parseInt(positionData[2])
+}).addTo(map);
+```
 [^1]: Step and calorie tracking are rough estimates. Steps being based on the average page length of a human (around 0.75 meters).
 [^2]: The gaining of points currently serves no purpose.
 [^3]: All modifications were made by us. Read more about FullPageOs [here](https://github.com/guysoft/FullPageOS).
 [^4]: Not in a creepy way, obvs.
 [^5]: Which we store in the 'coordinates' field of the quests database.
 [^6]: While we realise that this is a security risk, this is a small project and we are not overly concerned about making it secure until we need to.
+[^7]: This may be updated to a json model in future for ease of data parsing.
+[^8]: Or when they click on the "recent location" button.
