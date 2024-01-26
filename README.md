@@ -141,8 +141,112 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 ```
 
+### The Quests
+
+The quests are broken up into two parts. The description boxes and the markers. The boxes store information about the quests such as name, description, reward and how far away from the user it is as well as the button for starting the quest. These are created through some PHP code which gets the information of the quest from the database and then loops through this data, generating a box for each. The generation code is there twice so that if a quest is active then it will only generate the description box for that quest.
+```php
+<?php
+    //Get all information on a quest if it hasn't been completed
+    $questData = mysqli_query($database_connection, "SELECT * FROM `quests` WHERE `completed` = 0");
+    while($questItem = mysqli_fetch_assoc($questData)) {
+        $questId = $questItem['quest_id'];
+        $questName = $questItem['name'];
+        $questDescription = $questItem['descript'];
+        $questReward = $questItem['points_reward'];
+        
+        if (isset($_SESSION['questactive'])) {
+            if ($questId == $_SESSION['questactive']) {
+                echo"
+                <div class='singleQuestBox' id='questbox_$questId' dstFromUser=''>
+                    <div class='questTitleCard'>
+                        <p class='questHeader'>$questName</p>
+                        <p class='questDescription'>$questDescription</p>
+                        <p class='questReward'><strong>Reward:</strong> $questReward</p>
+                    </div>
+                    <form class='questButtonBox' method='GET' onsubmit='return submit(this)'>
+                        <button type='submit' name='abandonquest' class='abandonquest' value=$questId>Abandon Quest</button>
+                        <button type='submit' name='completequest' class='completequest'></button>
+                        <p class='questDst'></p>
+                    </form>
+                </div>
+                ";
+                break;
+            } else {
+                continue;
+            }
+        } else {
+            echo"
+            <div class='singleQuestBox' id='questbox_$questId' dstFromUser=''>
+            <div class='questTitleCard'>
+                <p class='questHeader'>$questName</p>
+                <p class='questDescription'>$questDescription</p>
+                <p class='questReward'><strong>Reward:</strong> $questReward</p>
+                </div>
+                <form class='questButtonBox' method='GET' onsubmit='return submit(this)'>
+                <button type='submit' name='startquest' class='startquest' value=$questId>Start Quest</button>
+                <p class='questDst'></p>
+            </form>
+            </div>
+            ";
+        }
+    }
+?>
+```
+The markers work very similarly except they are generated with JavaScript instead of a DOM element. Thankfully the LeafletJS library has a framework for creating and positioning markers given a latlng point[^5]. Again the code is there twice so that it only generates the marker for the active quest if there is one.
+```php
+<?php
+    $get_quests = mysqli_query($database_connection, "SELECT `quest_id`,`coordinates` FROM `quests` WHERE `completed` = 0");
+    while($current_quest = mysqli_fetch_assoc($get_quests)) {
+        $questId = $current_quest['quest_id'];
+        $coords = explode(",",$current_quest['coordinates']);
+        
+        if (isset($_SESSION['questactive'])) {
+            if ($questId == $_SESSION['questactive']) {
+                echo "
+                questmarker_$questId = L.marker(['$coords[0]','$coords[1]'], {title: '$questId', icon: myIcon, riseOnHover: true}).addTo(map); 
+                
+                questmarker_$questId.on('click', function() {
+                    map.setView(['$coords[0]','$coords[1]'], 16); 
+                    questmarker_$questId.getElement().classList.add('activeMarker');
+                    document.querySelector('#questbox_$questId').classList.add('active');
+                    document.querySelector('#questbox_$questId').classList.remove('hidden');
+                    document.querySelectorAll('.singleQuestBox:not(#questbox_$questId)').forEach((element) => {
+                        element.classList.remove('active'); element.classList.add('hidden')
+                    })
+                });
+                
+                ";
+                break;
+            }
+            else {
+                continue;
+            }
+        } else {
+            echo "
+                questmarker_$questId = L.marker(['$coords[0]','$coords[1]'], {title: '$questId', icon: myIcon, riseOnHover: true}).addTo(map); 
+                
+                questmarker_$questId.on('click', function() {
+                    map.setView(['$coords[0]','$coords[1]'], 16); 
+                    questmarker_$questId.getElement().classList.add('activeMarker');
+                    document.querySelector('#questbox_$questId').classList.add('active');
+                    document.querySelector('#questbox_$questId').classList.remove('hidden');
+                    document.querySelectorAll('.singleQuestBox:not(#questbox_$questId)').forEach((element) => {
+                        element.classList.remove('active'); element.classList.add('hidden')
+                    })
+                });
+            ";
+        }
+    }
+?>
+```
+
+## Lets Talk About Location Tracking
+
+Location tracking for the app is done via a mobile device that communicates with the WellBee unit through a WebSocket. The device has on it a Flutter app which uses the [Flutter Location]() library to pull the location data from the devices gps. It then advertises a websocket which will send the location data to whichever client connects to it[^6].
 
 [^1]: Step and calorie tracking are rough estimates. Steps being based on the average page length of a human (around 0.75 meters).
 [^2]: The gaining of points currently serves no purpose.
 [^3]: All modifications were made by us. Read more about FullPageOs [here](https://github.com/guysoft/FullPageOS).
 [^4]: Not in a creepy way, obvs.
+[^5]: Which we store in the 'coordinates' field of the quests database.
+[^6]: While we realise that this is a security risk, this is a small project and we are not overly concerned about making it secure until we need to.
