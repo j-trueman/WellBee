@@ -141,8 +141,208 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 ```
 
+### The Quests
+
+The quests are broken up into two parts. The description boxes and the markers. The boxes store information about the quests such as name, description, reward and how far away from the user it is as well as the button for starting the quest. These are created through some PHP code which gets the information of the quest from the database and then loops through this data, generating a box for each. The generation code is there twice so that if a quest is active then it will only generate the description box for that quest.
+```php
+<?php
+    //Get all information on a quest if it hasn't been completed
+    $questData = mysqli_query($database_connection, "SELECT * FROM `quests` WHERE `completed` = 0");
+    while($questItem = mysqli_fetch_assoc($questData)) {
+        $questId = $questItem['quest_id'];
+        $questName = $questItem['name'];
+        $questDescription = $questItem['descript'];
+        $questReward = $questItem['points_reward'];
+        
+        if (isset($_SESSION['questactive'])) {
+            if ($questId == $_SESSION['questactive']) {
+                echo"
+                <div class='singleQuestBox' id='questbox_$questId' dstFromUser=''>
+                    <div class='questTitleCard'>
+                        <p class='questHeader'>$questName</p>
+                        <p class='questDescription'>$questDescription</p>
+                        <p class='questReward'><strong>Reward:</strong> $questReward</p>
+                    </div>
+                    <form class='questButtonBox' method='GET' onsubmit='return submit(this)'>
+                        <button type='submit' name='abandonquest' class='abandonquest' value=$questId>Abandon Quest</button>
+                        <button type='submit' name='completequest' class='completequest'></button>
+                        <p class='questDst'></p>
+                    </form>
+                </div>
+                ";
+                break;
+            } else {
+                continue;
+            }
+        } else {
+            echo"
+            <div class='singleQuestBox' id='questbox_$questId' dstFromUser=''>
+            <div class='questTitleCard'>
+                <p class='questHeader'>$questName</p>
+                <p class='questDescription'>$questDescription</p>
+                <p class='questReward'><strong>Reward:</strong> $questReward</p>
+                </div>
+                <form class='questButtonBox' method='GET' onsubmit='return submit(this)'>
+                <button type='submit' name='startquest' class='startquest' value=$questId>Start Quest</button>
+                <p class='questDst'></p>
+            </form>
+            </div>
+            ";
+        }
+    }
+?>
+```
+The markers work very similarly except they are generated with JavaScript instead of a DOM element. Thankfully the LeafletJS library has a framework for creating and positioning markers given a latlng point[^5]. Again the code is there twice so that it only generates the marker for the active quest if there is one.
+```php
+<?php
+    $get_quests = mysqli_query($database_connection, "SELECT `quest_id`,`coordinates` FROM `quests` WHERE `completed` = 0");
+    while($current_quest = mysqli_fetch_assoc($get_quests)) {
+        $questId = $current_quest['quest_id'];
+        $coords = explode(",",$current_quest['coordinates']);
+        
+        if (isset($_SESSION['questactive'])) {
+            if ($questId == $_SESSION['questactive']) {
+                echo "
+                questmarker_$questId = L.marker(['$coords[0]','$coords[1]'], {title: '$questId', icon: myIcon, riseOnHover: true}).addTo(map); 
+                
+                questmarker_$questId.on('click', function() {
+                    map.setView(['$coords[0]','$coords[1]'], 16); 
+                    questmarker_$questId.getElement().classList.add('activeMarker');
+                    document.querySelector('#questbox_$questId').classList.add('active');
+                    document.querySelector('#questbox_$questId').classList.remove('hidden');
+                    document.querySelectorAll('.singleQuestBox:not(#questbox_$questId)').forEach((element) => {
+                        element.classList.remove('active'); element.classList.add('hidden')
+                    })
+                });
+                
+                ";
+                break;
+            }
+            else {
+                continue;
+            }
+        } else {
+            echo "
+                questmarker_$questId = L.marker(['$coords[0]','$coords[1]'], {title: '$questId', icon: myIcon, riseOnHover: true}).addTo(map); 
+                
+                questmarker_$questId.on('click', function() {
+                    map.setView(['$coords[0]','$coords[1]'], 16); 
+                    questmarker_$questId.getElement().classList.add('activeMarker');
+                    document.querySelector('#questbox_$questId').classList.add('active');
+                    document.querySelector('#questbox_$questId').classList.remove('hidden');
+                    document.querySelectorAll('.singleQuestBox:not(#questbox_$questId)').forEach((element) => {
+                        element.classList.remove('active'); element.classList.add('hidden')
+                    })
+                });
+            ";
+        }
+    }
+?>
+```
+
+## Lets Talk About Location Tracking
+
+### Companion App
+
+Location tracking for the app is done via a mobile device that communicates with the WellBee unit through a WebSocket. The device has on it a Flutter app which uses the [Flutter Location](https://pub.dev/packages/location) library to pull the location data from the devices gps. It then advertises a websocket which will send the location data to whichever client connects to it[^6]. You can read more about the companion app and how it works in the [COMPANION.md](https://github.com/j-trueman/WellBee/blob/main/COMPANION.md) readme.
+
+### Client Side
+
+On the client side we use JavaScript's built-in WebSocket API to communicate with the one being advertised by the companion app. To start, we create a new socket object.
+```javascript
+const sock = new WebSocket('ws://192.168.1.69:8080/ws');
+```
+As soon as this connection is opened, we can setup an event listener that listens for the "message" event and then we should start recieving location updates from the companion app. These updates come in the form of a list of comma separated values[^7] which we can split and assign each value to a variable.
+```javascript
+mapShouldTrack = true;
+
+sock.addEventListener("message", async (event) => {
+    console.clear();
+    positionData = event.data.split(',');
+    let userLat = parseFloat(positionData[0]);
+    let userLng = parseFloat(positionData[1]);
+    let positionAccuracy = parseFloat(positionData[2]);
+    let userSpeed = parseFloat(positionData[3]);
+...
+```
+You may also have noticed this `mapShouldTrack` variable which is used to determine whether the map should be centered on the user. This is on by default but turns off when the user clicks or moves the map to a different location[^8].
+We then use the position data to draw a circle around where the user is. The circle has a radius of whatever the accuracy value of the location data is (this is in meters).
+```javascript
+//This if statement is used to remove the circle from the previous location update.
+if (typeof circle != "undefined") {
+    circle.removeFrom(map);
+}
+
+circle = L.circle([userLat, userLng], {
+    color: 'lightblue',
+    fillColor: '#42e8f4',
+    fillOpacity: 0.5,
+    radius: parseInt(positionAccuracy)
+}).addTo(map);
+```
+Every time we recieve the location, we update how far the user has travelled that day by calculating the distance between the latitude and longitude points of the last known position and the users current position. Here is the function that is used to calculate this delta:
+```javascript
+const distanceCalc = (inputLat1,inputLng1,inputLat2,inputLng2) => {
+    //divided by 57.295... to convert to radians
+    let lat2 = inputLat2/57.29577951;
+    let lng2 = inputLng2/57.29577951;
+    let lat1 = inputLat1/57.29577951;
+    let lng1 = inputLng1/57.29577951;
+    let deltaInMiles = 3963.0 * Math.acos((Math.sin(lat2) * Math.sin(lat1)) + Math.cos(lat2) * Math.cos(lat1) * Math.cos(lng1 - lng2));
+    return deltaInMiles;
+}
+```
+If the distance moved since the last update is greater than 1 meter then we add the distance from the last known position to the the total distance traveled for that day. However, since there are sometimes innacuracies in the location updates we have to account for this. To combat this we also check if the users current speed is over a threshold (about 0.45m/s or 1mph). To take this even further, every time these criteria are consecutively met we add 1 to an integer called isMoving and if this integer reaches 3 then we update the total distance traveled and save this value to a cookie that expires at midnight[^9]. If the user stops moving before this integer hits 3 then it is reset back to 0.
+```javascript
+if(Cookies.get('dayDistanceTraveled')){
+    let distanceFromLastKnownPosition = distanceCalc(Cookies.get("latestLat"),Cookies.get("latestLng"),userLat,userLng);
+    let distanceToAdd = parseFloat(Cookies.get('dayDistanceTraveled'));
+    if(distanceFromLastKnownPosition >= 0.001 && userSpeed >= 0.44704 && userSpeed <= 6.7056) {
+        isMoving += 1
+        if (isMoving > 2) {
+            Cookies.set('dayDistanceTraveled', (distanceFromLastKnownPosition + distanceToAdd).toFixed(3), {expires: dateToExpire});
+            movementStatus = "Moving"
+            window.location = 'app.php';
+        }
+    } else {
+        movementStatus = "Idle"
+        isMoving = 0
+    }
+    ...
+```
+We then also calculate the steps taken by getting the total distance traveled and multiplying this by 1609 to get the distance in meters then dividing this by 0.75 (the average pace length of a human) to get the steps taken by the person.
+```javascript
+let currentStepsNo = Math.round((parseFloat(Cookies.get('dayDistanceTraveled')) * 1609) / 0.75);
+```
+We also use this same distanace calculation function to calculate the distance from the user to each quest. By using LeafletJS' `eachLayer()` funciton we can loop over every item in the map and, if its a marker, get its position and use that to calculate the distance. We can also use this to check when the user gets close enough to a quest to complete it.
+```javascript
+map.eachLayer(function(layer) {
+    if(layer.options.title) {
+        dstToQuest = distanceCalc(layer.getLatLng().lat, layer.getLatLng().lng, userLat, userLng);
+        let labelselector = `#questbox_${layer.options.title} .questDst`;
+        let boxselector = `#questbox_${layer.options.title}`;
+        if (!boxselector.includes('undefined')){
+            document.querySelector(boxselector).setAttribute("dstfromuser", dstToQuest.toFixed(2).toString());
+            document.querySelector(labelselector).innerHTML = `${dstToQuest.toFixed(2)}<sub>mi</sub> away`;
+            // console.log(`Distance to ${layer.options.title}: ${dstToQuest} miles`);
+        }
+        if(layer.options.title == Cookies.get('activequest') && dstToQuest <= 0.02) {
+            document.querySelector('.completequest').click();
+        }
+    }
+})
+```
+
+## How can YOU use WellBee?
+
+Want to download and use WellBee for yourself? Just download the image (once its there) from the [releases](https://github.com/j-trueman/WellBee/releases) tab and flash it to your RPi device using [Raspberry Pi Imager](https://www.raspberrypi.com/software/); 
 
 [^1]: Step and calorie tracking are rough estimates. Steps being based on the average page length of a human (around 0.75 meters).
 [^2]: The gaining of points currently serves no purpose.
 [^3]: All modifications were made by us. Read more about FullPageOs [here](https://github.com/guysoft/FullPageOS).
 [^4]: Not in a creepy way, obvs.
+[^5]: Which we store in the 'coordinates' field of the quests database.
+[^6]: While we realise that this is a security risk, this is a small project and we are not overly concerned about making it secure until we need to.
+[^7]: This may be updated to a json model in future for ease of data parsing.
+[^8]: Or when they click on the "recent location" button.
+[^9]: E.g. if the date was January 17, the cookie would expire at Jan 18 00:00:00
