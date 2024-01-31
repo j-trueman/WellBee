@@ -34,8 +34,6 @@
                 $questData = mysqli_query($database_connection, "SELECT * FROM `quests` WHERE `completed` = 0");
                 while($questItem = mysqli_fetch_assoc($questData)) {
                     $questId = $questItem['quest_id'];
-                    $questLat = trim($questItem['coordinates'], ",")[0];
-                    $questLong = trim($questItem['coordinates'], ",")[1];
                     $questName = $questItem['name'];
                     $questDescription = $questItem['descript'];
                     $questReward = $questItem['points_reward'];
@@ -43,7 +41,7 @@
                     if (isset($_SESSION['questactive'])) {
                         if ($questId == $_SESSION['questactive']) {
                             echo"
-                            <div class='singleQuestBox' questlat=$questLat questlong=$questLong id='questbox_$questId' dstFromUser=''>
+                            <div class='singleQuestBox' id='questbox_$questId' dstFromUser=''>
                                 <div class='questTitleCard'>
                                     <p class='questHeader'>$questName</p>
                                     <p class='questDescription'>$questDescription</p>
@@ -62,7 +60,7 @@
                         }
                     } else {
                         echo"
-                        <div class='singleQuestBox' questlat=$questLat questlong=$questLong id='questbox_$questId' dstFromUser=''>
+                        <div class='singleQuestBox' id='questbox_$questId' dstFromUser=''>
                         <div class='questTitleCard'>
                             <p class='questHeader'>$questName</p>
                             <p class='questDescription'>$questDescription</p>
@@ -95,7 +93,7 @@
            //List of function to call once the page is loaded 
         });
         
-        const sock = new WebSocket('ws://192.168.1.69:8080/ws');
+        const sock = new WebSocket('ws://10.189.240.210:8080/ws');
         mapShouldTrack = true;
         
         const distanceCalc = (inputLat1,inputLng1,inputLat2,inputLng2) => {
@@ -110,6 +108,11 @@
         sock.addEventListener("message", async (event) => {
             console.clear();
             positionData = event.data.split(',');
+            let userLat = parseFloat(positionData[0]);
+            let userLng = parseFloat(positionData[1]);
+            let positionAccuracy = parseFloat(positionData[2]);
+            let userSpeed = parseFloat(positionData[3]);
+            
             console.log(`Position: ${positionData[0]},${positionData[1]}`);
             console.log(`Accuracy: ${parseFloat(positionData[2]).toFixed(2)} meters`);
             console.log(`Speed: ${(positionData[3] * 2.237).toFixed(4)} mi/h`);
@@ -146,7 +149,7 @@
                     if (isMoving > 2) {
                         Cookies.set('dayDistanceTraveled', (distanceFromLastKnownPosition + distanceToAdd).toFixed(3), {expires: dateToExpire});
                         movementStatus = "Moving"
-                        window.location = 'app.php';
+                        // window.location = 'app.php';
                     }
                 } else {
                     movementStatus = "Idle"

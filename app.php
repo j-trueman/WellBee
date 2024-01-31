@@ -99,7 +99,7 @@
             }
         };
         
-        const sock = new WebSocket('ws://192.168.1.69:8080/ws');
+        const sock = new WebSocket('ws://10.189.240.210:8080/ws');
         
         const distanceCalc = (inputLat1,inputLng1,inputLat2,inputLng2) => {
             let lat2 = inputLat2/57.29577951;
