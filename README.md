@@ -335,7 +335,7 @@ map.eachLayer(function(layer) {
 
 ## How can YOU use WellBee?
 
-Want to download and use WellBee for yourself? Just download the image from the [releases](https://github.com/j-trueman/WellBee/releases) tab and flash it to your RPi device using [Raspberry Pi Imager](https://www.raspberrypi.com/software/) You can then use it as a mobile device by connecting a touchscreen to it, or you can just use it with a regular monitor. You'll also need to download the [WellBee Companion App](https://github.com/j-trueman/WellBee/releases/tag/companion-app) (currently only available for Android).
+Want to download and use WellBee for yourself? Just download the image from the [releases](https://github.com/j-trueman/WellBee/releases) tab and flash it to your RPi device using [Raspberry Pi Imager](https://www.raspberrypi.com/software/) You can then use it as a mobile device by connecting a touchscreen to it, or you can just use it with a regular monitor. You'll also need to download the [WellBee Companion App](https://github.com/j-trueman/WellBee/releases/tag/companion-app) (currently only available for Android).[^10]
 
 [^1]: Step and calorie tracking are rough estimates. Steps being based on the average page length of a human (around 0.75 meters).
 [^2]: The gaining of points currently serves no purpose.
@@ -346,3 +346,4 @@ Want to download and use WellBee for yourself? Just download the image from the 
 [^7]: This may be updated to a json model in future for ease of data parsing.
 [^8]: Or when they click on the "recent location" button.
 [^9]: E.g. if the date was January 17, the cookie would expire at Jan 18 00:00:00
+[^10]: You'll also need to configure the WiFi by editing the fullpageos_wpa_supplicant.txt file in the /boot folder.
